@@ -135,6 +135,14 @@ func (c *Client) CreateMachine(ctx context.Context, deps shared.MachineCreateDep
 	if !ok {
 		return fmt.Errorf("expected *nicov1.NicoMachine, got %T", infraMachineObj)
 	}
+	if len(config.VpcPrefixIDs) > 0 {
+		vpcPrefixID, walkAnnotations, err := startVpcPrefix(ctx, deps.K8sClient, nicoMachine, config.NodePoolID, config.VpcPrefixIDs)
+		if err != nil {
+			return err
+		}
+		nicoMachine.Spec.Interfaces[0].VPCPrefixID = vpcPrefixID
+		nicoMachine.Annotations = walkAnnotations
+	}
 	if err := deps.K8sClient.Patch(ctx, nicoMachine, client.Apply, client.FieldOwner(deps.FieldManagerName), client.ForceOwnership); err != nil {
 		return fmt.Errorf("failed to apply NicoMachine %s: %w", nicoMachine.Name, err)
 	}
